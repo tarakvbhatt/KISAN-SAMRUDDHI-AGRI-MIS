@@ -83,6 +83,7 @@ function App() {
   const [yieldLoading, setYieldLoading] = useState(false)
   const [briefing, setBriefing] = useState(null)
   const [briefingLoading, setBriefingLoading] = useState(false)
+  const [briefingLang, setBriefingLang] = useState('en')
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [farmersLoading, setFarmersLoading] = useState(false)
@@ -209,14 +210,15 @@ function App() {
     finally { setYieldLoading(false) }
   }, [])
 
-  const generateBriefing = useCallback(async () => {
+  const generateBriefing = useCallback(async (lang) => {
+    const language = lang || briefingLang
     setBriefingLoading(true); setMessage(null)
     try {
-      const body = await loadJson('/api/mis/ai-briefing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-      setBriefing(body)
+      const body = await loadJson('/api/mis/ai-briefing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language }) })
+      setBriefing(body); setBriefingLang(language)
     } catch (e) { setMessage({ type: 'error', text: e.message }) }
     finally { setBriefingLoading(false) }
-  }, [])
+  }, [briefingLang])
 
   useEffect(() => { loadOverview() }, [loadOverview])
   useEffect(() => { if (activeView === 'farmers') loadFarmers('') }, [activeView, loadFarmers])
@@ -403,18 +405,24 @@ function App() {
                         <div className="flex items-start gap-4">
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white shadow-sm"><Sparkles className="h-5 w-5" /></div>
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">AI weekly briefing</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">AI weekly briefing · સાપ્તાહિક બ્રીફિંગ</p>
                             <h3 className="mt-1 text-lg font-semibold text-[#173b2d]">Ask the data what matters this week.</h3>
                             <p className="mt-1 max-w-xl text-xs leading-5 text-muted-foreground">We&apos;ll scan dashboard KPIs, village income trends, crop yield vs target and group attendance to surface wins, concerns and recommended CRP actions.</p>
                           </div>
                         </div>
-                        <Button onClick={generateBriefing} disabled={briefingLoading} className="w-fit gap-2 bg-[#123c2e] text-white hover:bg-[#1d5842]">
-                          {briefingLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                          {briefingLoading ? 'Thinking…' : 'Generate briefing'}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <div className="inline-flex rounded-lg border border-border bg-white p-0.5 text-xs font-semibold">
+                            <button type="button" onClick={() => setBriefingLang('en')} className={`rounded-md px-3 py-1.5 transition ${briefingLang === 'en' ? 'bg-emerald-700 text-white' : 'text-muted-foreground hover:bg-muted/50'}`}>EN</button>
+                            <button type="button" onClick={() => setBriefingLang('gu')} className={`rounded-md px-3 py-1.5 transition ${briefingLang === 'gu' ? 'bg-emerald-700 text-white' : 'text-muted-foreground hover:bg-muted/50'}`}>ગુજ</button>
+                          </div>
+                          <Button onClick={() => generateBriefing(briefingLang)} disabled={briefingLoading} className="w-fit gap-2 bg-[#123c2e] text-white hover:bg-[#1d5842]">
+                            {briefingLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                            {briefingLoading ? (briefingLang === 'gu' ? 'વિચારી રહ્યું છે…' : 'Thinking…') : (briefingLang === 'gu' ? 'બ્રીફિંગ બનાવો' : 'Generate briefing')}
+                          </Button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="space-y-5">
+                      <div className="space-y-5" dir={briefing.language === 'gu' ? 'ltr' : 'ltr'}>
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
                             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 text-white"><Sparkles className="h-5 w-5" /></div>
@@ -423,26 +431,32 @@ function App() {
                               <p className="mt-1 text-lg font-semibold leading-snug text-[#173b2d]">{briefing.briefing.headline}</p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" onClick={generateBriefing} disabled={briefingLoading} className="gap-2 bg-white">
-                            <RefreshCw className={`h-3.5 w-3.5 ${briefingLoading ? 'animate-spin' : ''}`} /> Regenerate
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <div className="inline-flex rounded-lg border border-border bg-white p-0.5 text-xs font-semibold">
+                              <button type="button" disabled={briefingLoading} onClick={() => generateBriefing('en')} className={`rounded-md px-2.5 py-1 transition ${briefing.language === 'en' ? 'bg-emerald-700 text-white' : 'text-muted-foreground hover:bg-muted/50'}`}>EN</button>
+                              <button type="button" disabled={briefingLoading} onClick={() => generateBriefing('gu')} className={`rounded-md px-2.5 py-1 transition ${briefing.language === 'gu' ? 'bg-emerald-700 text-white' : 'text-muted-foreground hover:bg-muted/50'}`}>ગુજ</button>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => generateBriefing(briefing.language)} disabled={briefingLoading} className="gap-2 bg-white">
+                              <RefreshCw className={`h-3.5 w-3.5 ${briefingLoading ? 'animate-spin' : ''}`} /> {briefing.language === 'gu' ? 'ફરી બનાવો' : 'Regenerate'}
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid gap-3 sm:grid-cols-3">
                           <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800"><TrendingUp className="h-3.5 w-3.5" /> Wins</div>
+                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-800"><TrendingUp className="h-3.5 w-3.5" /> {briefing.language === 'gu' ? 'સફળતાઓ' : 'Wins'}</div>
                             <ul className="space-y-1.5 text-xs leading-5 text-emerald-900">
                               {briefing.briefing.wins?.map((w, i) => <li key={i} className="flex gap-1.5"><Check className="h-3 w-3 shrink-0 translate-y-0.5" /><span>{w}</span></li>)}
                             </ul>
                           </div>
                           <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
-                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800"><AlertCircle className="h-3.5 w-3.5" /> Concerns</div>
+                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-800"><AlertCircle className="h-3.5 w-3.5" /> {briefing.language === 'gu' ? 'ચિંતાના વિષયો' : 'Concerns'}</div>
                             <ul className="space-y-1.5 text-xs leading-5 text-amber-900">
                               {briefing.briefing.concerns?.map((c, i) => <li key={i} className="flex gap-1.5"><span className="mt-0.5">•</span><span>{c}</span></li>)}
                             </ul>
                           </div>
                           <div className="rounded-xl border border-sky-200 bg-sky-50/60 p-4">
-                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-sky-800"><Target className="h-3.5 w-3.5" /> Actions this week</div>
+                            <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-sky-800"><Target className="h-3.5 w-3.5" /> {briefing.language === 'gu' ? 'આ અઠવાડિયાના પગલાં' : 'Actions this week'}</div>
                             <ol className="space-y-1.5 text-xs leading-5 text-sky-900">
                               {briefing.briefing.actions?.map((a, i) => <li key={i} className="flex gap-1.5"><span className="font-semibold">{i + 1}.</span><span>{a}</span></li>)}
                             </ol>
@@ -451,7 +465,7 @@ function App() {
 
                         {briefing.briefing.attention_villages?.length ? (
                           <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="font-semibold text-muted-foreground">Villages needing CRP visit:</span>
+                            <span className="font-semibold text-muted-foreground">{briefing.language === 'gu' ? 'CRP મુલાકાતની જરૂર છે તેવા ગામો:' : 'Villages needing CRP visit:'}</span>
                             {briefing.briefing.attention_villages.map((v) => (
                               <Badge key={v} className="bg-rose-100 text-rose-800 hover:bg-rose-100"><MapPin className="mr-1 h-2.5 w-2.5" />{v}</Badge>
                             ))}

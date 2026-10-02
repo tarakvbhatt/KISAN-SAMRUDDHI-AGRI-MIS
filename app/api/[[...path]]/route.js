@@ -557,6 +557,9 @@ async function handleRoute(request, { params }) {
 
     // === NEW: AI Weekly Briefing ===
     if (route === '/mis/ai-briefing' && method === 'POST') {
+      let reqBody = {}
+      try { reqBody = await request.json() } catch { reqBody = {} }
+      const language = reqBody.language === 'gu' ? 'gu' : 'en'
       // Build the data snapshot from existing views
       const [kpiRes, villageRes, impactRes, groupsRes] = await Promise.all([
         supabase.from('v_dashboard_kpis').select('*').limit(1).maybeSingle(),
@@ -639,12 +642,17 @@ async function handleRoute(request, { params }) {
   "actions": ["3 specific recommended actions for the Programme Manager this week"],
   "attention_villages": ["village names that need urgent CRP visit"]
 }
-Use concise English. Numbers must come from the snapshot. Do NOT invent names or metrics.`
+${language === 'gu'
+  ? 'Write every text value in GUJARATI script (ગુજરાતી). Keep village and crop names as-is (English). Keep the JSON keys and attention_villages values in English.'
+  : 'Use concise English.'}
+Numbers must come from the snapshot. Do NOT invent names or metrics.`
 
         const chat = new LlmChat(
           apiKey,
-          `briefing-${Date.now()}`,
-          'You are an experienced NGO agriculture programme manager. You analyze MIS data snapshots and produce short, specific, actionable weekly briefings in English. Only use facts in the snapshot.'
+          `briefing-${language}-${Date.now()}`,
+          language === 'gu'
+            ? 'તમે અનુભવી NGO કૃષિ કાર્યક્રમ મેનેજર છો. તમે MIS ડેટા સ્નેપશોટ વિશ્લેષણ કરીને ગુજરાતીમાં ટૂંકી, સ્પષ્ટ અને કાર્યલક્ષી સાપ્તાહિક બ્રીફિંગ બનાવો છો. માત્ર સ્નેપશોટમાં આપેલા તથ્યોનો ઉપયોગ કરો.'
+            : 'You are an experienced NGO agriculture programme manager. You analyze MIS data snapshots and produce short, specific, actionable weekly briefings in English. Only use facts in the snapshot.'
         )
           .withModel(provider, model)
           .withParams({ max_tokens: 4000 })
@@ -658,7 +666,7 @@ Use concise English. Numbers must come from the snapshot. Do NOT invent names or
         const cleaned = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim()
         let briefing
         try { briefing = JSON.parse(cleaned) } catch { briefing = { headline: 'Briefing generated (parsing failed)', wins: [], concerns: [], actions: [cleaned.slice(0, 400)], attention_villages: [] } }
-        return json({ briefing, generated_at: new Date().toISOString(), snapshot_summary: { farmers: snapshot.kpis.total_beneficiaries, villages: snapshot.kpis.villages_covered, crop_records: snapshot.kpis.khedut_crop_records } })
+        return json({ briefing, language, generated_at: new Date().toISOString(), snapshot_summary: { farmers: snapshot.kpis.total_beneficiaries, villages: snapshot.kpis.villages_covered, crop_records: snapshot.kpis.khedut_crop_records } })
       } catch (llmErr) {
         console.error('LLM briefing error:', llmErr?.message || llmErr)
         return json({ error: 'Unable to generate AI briefing', detail: llmErr?.message?.slice(0, 200) }, { status: 502 })
