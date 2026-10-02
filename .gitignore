@@ -1,0 +1,55 @@
+# dependencies
+node_modules/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+coverage/
+
+# next.js
+.next/
+out/
+build/
+dist/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files (SECRETS – never commit)
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# Emergent / platform
+.emergent/
+
+# Supabase imported data snapshots (large) and the uploaded workbook
+/data/
+/app/data/
+/tmp/
+
+# Testing agent artefacts
+/tests/__pycache__/
+backend_test.py
+
+# IDE
+.vscode/
+.idea/
